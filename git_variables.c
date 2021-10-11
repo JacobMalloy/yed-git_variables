@@ -26,29 +26,40 @@ int yed_plugin_boot(yed_plugin *self) {
     if(yed_get_var("git-variables-update-interval")==NULL){
         yed_set_var("git-variables-update-interval","1000");
     }
+    if(yed_get_var("git-variables-branch-icon")==NULL){
+        yed_set_var("git-variables-branch-icon","");
+    }
     return 0;
 }
 
 void git_variables_post_pump(yed_event *event){
     unsigned long long current_time;
-    char *buffer=NULL;
+    char *output=NULL;
     int status;
     int output_len;
     unsigned long long update_interval;
-    if(sscanf(yed_get_var("git-variables-update-interval"),"%llu",&update_interval)!=1){
+    char* update_interval_string;
+    char* buffer;
+    char *icon_buffer;
+    update_interval_string=yed_get_var("git-variables-update-interval");
+    if(update_interval_string==NULL||sscanf(yed_get_var("git-variables-update-interval"),"%llu",&update_interval)!=1){
         update_interval=1000;
     }
     current_time = measure_time_now_ms();
     if((current_time-last_update_time)>update_interval){
-        buffer = yed_run_subproc("git rev-parse --abbrev-ref HEAD",&output_len,&status);
-        if(status != 0||buffer==NULL){
+        output = yed_run_subproc("git rev-parse --abbrev-ref HEAD",&output_len,&status);
+        if(status != 0||output==NULL){
             yed_set_var("git-variables-branch", "");
         }
         else{
+            icon_buffer = yed_get_var("git-variables-branch-icon");
+            buffer = malloc(snprintf(NULL,0,"%s%s",icon_buffer==NULL?"":icon_buffer,output)+1);
+            sprintf(buffer,"%s%s",icon_buffer==NULL?"":icon_buffer,output);
             yed_set_var("git-variables-branch", buffer);
-        }
-        if(buffer!=NULL){
             free(buffer);
+        }
+        if(output!=NULL){
+            free(output);
         }
         last_update_time=measure_time_now_ms();
     }
